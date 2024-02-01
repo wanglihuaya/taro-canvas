@@ -8,39 +8,58 @@ export default function Index() {
     const query = Taro.createSelectorQuery();
     query
       .select("#myCanvas")
-      .fields({ node: true, size: true })
+      .fields({ node: true, size: true, rect: true })
       .exec((res) => {
         const canvas = res[0].node;
+        const rect = res[0];
         const ctx = canvas.getContext("2d");
-        console.log("Taro.getSystemInfoSync()", Taro.getSystemInfoSync());
         const dpr = Taro.getSystemInfoSync().pixelRatio;
-        // 填充 tomato
-        ctx.fillStyle = "tomato";
-        // 读取图片
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        // ctx.scale(dpr, dpr);
         const image = canvas.createImage();
         image.src =
-          "https://images.unsplash.com/photo-1706459493377-fcfe8d3c068b?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxlZGl0b3JpYWwtZmVlZHwxMDl8fHxlbnwwfHx8fHw%3D";
-
+          "https://images.unsplash.com/photo-1706401795357-36561e966374?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxlZGl0b3JpYWwtZmVlZHw2Mnx8fGVufDB8fHx8fA%3D%3D";
+        // image.src =
+        //   "https://images.unsplash.com/photo-1706459493377-fcfe8d3c068b?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxlZGl0b3JpYWwtZmVlZHwxMDl8fHxlbnwwfHx8fHw%3D";
         image.onload = () => {
-          // 设置 image 的宽高，保持原图宽高比，让它可以在 canvas 中完整显示
-          const imageWidth = image.width / dpr;
-          const imageHeight = image.height / dpr;
-          canvas.width = imageWidth;
-          canvas.height = imageHeight;
-          // 将图片绘制到 canvas 中
+          // 绘制图片
+          let scale = 1;
+          // 覆盖满整个canvas，图片可能会裁切
+          scale = canvas.height / image.height;
+          // 将整个图片显示在canvas中，可能会有空白
+          // scale = canvas.width / image.width;
 
-          ctx.drawImage(
-            image,
-            0,
-            0,
-            image.width > image.height ? canvas.width : image.width,
-            // (canvas.width * imageHeight) / imageWidth,
-            image.height > image.width ? canvas.height : image.height,
-            0,
-            0,
-            canvas.width,
-            canvas.height
-          );
+          image.width = image.width * scale;
+          image.height = image.height * scale;
+          ctx.drawImage(image, 0, 0, image.width, image.height);
+
+          // 添加文字
+          ctx.font = `italic bold ${100}px Arial`;
+          ctx.fillStyle = "red";
+          ctx.textAlign = "center";
+          // 文字宽度
+          const textWidth = ctx.measureText("Hello World").width;
+
+          ctx.fillText("Hello World", canvas.width / 2, 200);
+
+          // 将canvas保存为图片 保存到相册
+          Taro.canvasToTempFilePath({
+            canvas,
+            fileType: "png",
+            success: (_res) => {
+              console.log("临时图片地址", _res.tempFilePath);
+              Taro.saveImageToPhotosAlbum({
+                filePath: _res.tempFilePath,
+                success: (__res) => {
+                  console.log(__res);
+                },
+                fail: (err) => {
+                  console.log(err);
+                },
+              });
+            },
+          });
         };
       });
   });
